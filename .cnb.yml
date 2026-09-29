@@ -1,0 +1,19 @@
+"**":
+  push:
+    sync:
+      runner:
+        cpus: 2
+      services:
+        - docker
+      stages:
+        - name: CNB sync to Github-afilmory
+          image: tencentcom/git-sync
+          imports:
+            - https://cnb.cool/ZhienXuan/secret/-/blob/main/git.yml
+          settings:
+            target_url: https://github.com/zhienxuan/afilmory.git
+            auth_type: https
+            username: ${GIT_USERNAME}
+            password: ${GIT_ACCESS_TOKEN}
+            git_email: "hajimi.china@gmail.com"
+            force: true
