@@ -1947,6 +1947,44 @@ export const tocData: FileToc[] = [
       },
     ],
   },
+  {
+    file: 'user-guide/gallery.mdx',
+    path: '/user-guide/gallery',
+    title: 'Using the Gallery',
+    toc: [
+      {
+        id: 'heading-using-the-gallery',
+        level: 1,
+        text: 'Using the Gallery',
+        children: [
+          {
+            id: 'heading-default-sort-order',
+            level: 2,
+            text: 'Default Sort Order',
+            children: [],
+          },
+          {
+            id: 'heading-changing-the-sort-order',
+            level: 2,
+            text: 'Changing the Sort Order',
+            children: [],
+          },
+          {
+            id: 'heading-changing-the-view',
+            level: 2,
+            text: 'Changing the View',
+            children: [],
+          },
+          {
+            id: 'heading-filtering-the-collection',
+            level: 2,
+            text: 'Filtering the Collection',
+            children: [],
+          },
+        ],
+      },
+    ],
+  },
 ]
 
 // Helper function to find TOC data by file path

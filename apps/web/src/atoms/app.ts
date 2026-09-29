@@ -6,7 +6,7 @@ export type GalleryViewMode = 'masonry' | 'list'
 
 export const gallerySettingAtom = atom({
   sortBy: 'date' as GallerySortBy,
-  sortOrder: 'desc' as GallerySortOrder,
+  sortOrder: 'asc' as GallerySortOrder,
   selectedTags: [] as string[],
   selectedCameras: [] as string[], // Selected camera display names
   selectedLenses: [] as string[], // Selected lens display names

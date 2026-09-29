@@ -1,0 +1,44 @@
+---
+title: Using the Gallery
+description: Browse, sort, filter, and customize how your photos are displayed.
+createdAt: 2026-09-29T10:00:00+08:00
+lastModified: 2026-09-29T10:00:00+08:00
+order: 4
+---
+
+# Using the Gallery
+
+The gallery is the main browsing experience for your photo collection. This guide covers how photos are ordered, how to change the view, and how to filter your collection.
+
+## Default Sort Order
+
+By default, photos are displayed **oldest-first** (ascending by capture time). The gallery sorts using each photo's EXIF `DateTimeOriginal`, and falls back to the file's last-modified time when EXIF data is missing.
+
+This default is applied on first load and requires no configuration. If you previously had a preference, note that the sort state is not persisted between sessions—the gallery always starts oldest-first.
+
+## Changing the Sort Order
+
+You can reverse the order at any time from the view panel (the settings icon in the page header):
+
+- **Oldest first** — chronological order, earliest photo at the top (default)
+- **Newest first** — reverse chronological order, latest photo at the top
+
+Switching the order is instant and client-side; it does not require rebuilding the manifest or redeploying.
+
+## Changing the View
+
+Alongside sorting, the view panel lets you adjust how photos are presented:
+
+- **Layout** — Masonry grid (default) or a detailed list view
+- **Columns** — Automatic (responsive to screen width) or a fixed column count
+
+## Filtering the Collection
+
+Narrow down what's shown without leaving the gallery:
+
+- **Tags** — show photos that match selected tags (union or intersection mode)
+- **Camera** — filter by camera make and model
+- **Lens** — filter by lens make and model
+- **Rating** — show only photos at or above a minimum star rating
+
+Filters and sort order combine: the gallery first applies your filters, then orders the remaining photos by the selected sort order.

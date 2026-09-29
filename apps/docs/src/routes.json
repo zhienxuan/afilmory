@@ -295,5 +295,16 @@
       "lastModified": "2025-11-23T20:22:24+08:00",
       "order": "90"
     }
+  },
+  {
+    "path": "/user-guide/gallery",
+    "title": "Using the Gallery",
+    "meta": {
+      "title": "Using the Gallery",
+      "description": "Browse, sort, filter, and customize how your photos are displayed.",
+      "createdAt": "2026-09-29T10:00:00+08:00",
+      "lastModified": "2026-09-29T10:00:00+08:00",
+      "order": "4"
+    }
   }
 ]
