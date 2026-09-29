@@ -1,13 +1,13 @@
 {
-  "name": "WSS2026 Photo Gallery",
-  "title": "WSS2026 Photo Gallery",
+  "name": "WSS2026 Gallery",
+  "title": "WorldSkillShanghai2026 Memory Gallery",
   "description": "Capturing beautiful moments",
   "url": "https://afilmory-7oo.pages.dev/",
   "accentColor": "#fb7185",
   "author": {
     "name": "ZhienXuan",
     "url": "https://ZhienXuan.com",
-    "avatar": "https://zhienxuan.com/images/main_icon.png"
+    "avatar": ""
   },
   "social": {
     "github": "zhienxuan"
