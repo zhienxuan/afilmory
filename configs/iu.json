@@ -1,0 +1,18 @@
+{
+  "name": "IU Gallery",
+  "title": "IU",
+  "description": "Capturing beautiful moments",
+  "url": "https://iu-1rj.pages.dev/",
+  "accentColor": "#fb7185",
+  "author": {
+    "name": "ZhienXuan",
+    "url": "https://ZhienXuan.com",
+    "avatar": ""
+  },
+  "social": {
+    "github": "zhienxuan"
+  },
+  "map": ["maplibre"],
+  "mapStyle": "builtin",
+  "mapProjection": "mercator"
+}
