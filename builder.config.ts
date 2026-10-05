@@ -9,5 +9,6 @@ export default defineBuilderConfig(() => ({
     prefix: process.env.S3_PREFIX || 'photos/',
     accessKeyId: process.env.S3_ACCESS_KEY_ID!,
     secretAccessKey: process.env.S3_SECRET_ACCESS_KEY!,
+    customDomain: process.env.S3_CUSTOM_DOMAIN,
   },
 }))
