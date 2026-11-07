@@ -125,7 +125,8 @@ const staticWebBuildPlugins: PluginOption[] = [
           },
         },
         {
-          urlPattern: /\.(?:png|jpg|jpeg|svg|webp)$/,
+          // 缩略图候选是 WebP/AVIF，avif 别漏在缓存之外
+          urlPattern: /\.(?:png|jpg|jpeg|svg|webp|avif)$/,
           handler: 'CacheFirst',
           options: {
             cacheName: 'images-cache',
