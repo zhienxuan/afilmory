@@ -100,7 +100,11 @@ const staticWebBuildPlugins: PluginOption[] = [
     workbox: {
       maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10MB
       globPatterns: ['**/*.{js,css,html,ico,png,svg,webp}'],
-      globIgnores: ['**/*.{jpg,jpeg}'], // 忽略大图片文件
+      // og-image-*.png 是每次构建现生成的 OG 卡片（文件名带时间戳），只在 meta 里给
+      // 社交爬虫看，App 内从不显示。cleanup 特意保留最近 3 张，于是 public/ 里常态驻留
+      // 若干张残留，被 copy 进 dist 后会被 precache 全量收进去 —— entries 数会随本机
+      // 构建历史浮动（33/34/35 都见过），白占用户缓存。这里直接排除，让 entries 稳定。
+      globIgnores: ['**/*.{jpg,jpeg}', '**/og-image-*.png'], // 忽略大图片与 OG 卡片
       runtimeCaching: [
         {
           urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
