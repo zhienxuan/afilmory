@@ -34,12 +34,6 @@ export type StorageUploadProgressHandler = (progress: StorageUploadProgress) => 
 
 export interface StorageUploadOptions {
   contentType?: string
-  /**
-   * 对象的 Cache-Control 头。
-   * 缩略图/OG 图这类按内容寻址的产物应传长期 immutable 策略，
-   * 让 Cloudflare 边缘与浏览器都吃满缓存，避免回源。
-   */
-  cacheControl?: string
   onProgress?: StorageUploadProgressHandler
 }
 

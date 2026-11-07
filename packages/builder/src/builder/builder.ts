@@ -1,10 +1,11 @@
+import path from 'node:path'
+
 import type { AfilmoryManifest, CameraInfo, LensInfo, PhotoManifestItem, ProcessPhotoResult } from '@afilmory/typing'
 
-import { thumbnailCacheValid } from '../image/thumbnail.js'
+import { thumbnailExists } from '../image/thumbnail.js'
 import { logger } from '../logger/index.js'
 import { handleDeletedPhotos, loadExistingManifest, needsUpdate, saveManifest } from '../manifest/manager.js'
 import { CURRENT_MANIFEST_VERSION } from '../manifest/version.js'
-import { resolvePhotoId } from '../photo/photo-id.js'
 import type { PhotoProcessorOptions } from '../photo/processor.js'
 import { processPhoto } from '../photo/processor.js'
 import type { PluginRunState } from '../plugins/manager.js'
@@ -720,12 +721,9 @@ export class AfilmoryBuilder {
 
     const tasksToProcess: Awaited<ReturnType<StorageManager['listImages']>> = []
 
-    const digestSuffixLength = this.config.system.processing.digestSuffixLength
-
     for (const obj of imageObjects) {
       const { key } = obj
-      // 缩略图索引按 photoId 落盘，这里必须和处理管道用同一条推导规则
-      const photoId = resolvePhotoId(key, digestSuffixLength)
+      const photoId = path.basename(key, path.extname(key))
       const existingItem = existingManifestMap.get(key)
 
       // 新图片需要处理
@@ -747,9 +745,9 @@ export class AfilmoryBuilder {
         continue
       }
 
-      // 缩略图缓存对不上（文件缺失 / 内容变了 / 旧版本无指纹索引）就重新处理一次
-      const cacheValid = await thumbnailCacheValid(photoId, existingItem.digest)
-      if (!cacheValid || options.isForceThumbnails) {
+      // 检查缩略图是否存在，如果不存在或强制刷新缩略图则需要处理
+      const hasThumbnail = await thumbnailExists(photoId)
+      if (!hasThumbnail || options.isForceThumbnails) {
         tasksToProcess.push(obj)
         continue
       }

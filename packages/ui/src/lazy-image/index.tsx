@@ -9,12 +9,6 @@ export interface LazyImageProps {
   thumbHash?: string | null
   className?: string
   style?: React.CSSProperties
-  /** 响应式候选集，原样透传给 <img srcSet> */
-  srcSet?: string
-  /** 候选集的尺寸描述，用于告诉浏览器该选哪一档 */
-  sizes?: string
-  /** 首屏图片可传 high，让浏览器提前调度 */
-  fetchPriority?: 'high' | 'low' | 'auto'
   onLoad?: () => void
   onError?: () => void
   // Intersection observer options
@@ -28,9 +22,6 @@ export const LazyImage = ({
   thumbHash,
   className,
   style,
-  srcSet,
-  sizes,
-  fetchPriority,
   onLoad,
   onError,
   rootMargin = '50px',
@@ -66,9 +57,6 @@ export const LazyImage = ({
       {shouldLoadImage && (
         <img
           src={src}
-          srcSet={srcSet}
-          sizes={sizes}
-          fetchPriority={fetchPriority}
           alt={alt}
           className={clsxm(
             'h-full w-full object-cover transition-opacity duration-300',

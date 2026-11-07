@@ -1,6 +1,6 @@
 import type { PhotoManifestItem } from '@afilmory/typing'
 
-import { thumbnailCacheValid } from '../image/thumbnail.js'
+import { thumbnailExists } from '../image/thumbnail.js'
 import type { PhotoProcessorOptions } from './processor.js'
 
 export interface CacheableData {
@@ -43,12 +43,12 @@ export async function shouldProcessPhoto(
     }
   }
 
-  // 缩略图缓存是否对得上：文件在 + 内容没变（含旧版本留下的无指纹索引）
-  const cacheValid = await thumbnailCacheValid(photoId, existingItem.digest)
-  if (!cacheValid || options.isForceThumbnails) {
+  // 检查缩略图是否存在
+  const hasThumbnail = await thumbnailExists(photoId)
+  if (!hasThumbnail || options.isForceThumbnails) {
     return {
       shouldProcess: true,
-      reason: options.isForceThumbnails ? '强制重新生成缩略图' : '缩略图缓存缺失或已过期',
+      reason: options.isForceThumbnails ? '强制重新生成缩略图' : '缩略图缺失',
     }
   }
 

@@ -22,7 +22,6 @@ import { detectGainMap } from './gainmap-detector.js'
 import { extractPhotoInfo } from './info-extractor.js'
 import { processLivePhoto } from './live-photo-handler.js'
 import { getGlobalLoggers } from './logger-adapter.js'
-import { resolvePhotoId } from './photo-id.js'
 import { detectMotionPhoto } from './motion-photo-detector.js'
 import type { PhotoProcessorOptions } from './processor.js'
 
@@ -133,7 +132,14 @@ async function generatePhotoId(s3Key: string): Promise<string> {
       processing: { digestSuffixLength },
     },
   } = builder.getConfig()
-  return resolvePhotoId(s3Key, digestSuffixLength)
+  if (!digestSuffixLength || digestSuffixLength <= 0) {
+    return path.basename(s3Key, path.extname(s3Key))
+  }
+
+  const baseName = path.basename(s3Key, path.extname(s3Key))
+  const sha256 = crypto.createHash('sha256').update(s3Key).digest('hex')
+  const digestSuffix = sha256.slice(0, digestSuffixLength)
+  return `${baseName}_${digestSuffix}`
 }
 
 /**
@@ -166,17 +172,9 @@ export async function executePhotoProcessingPipeline(
 
     context.pluginData[THUMBNAIL_PLUGIN_DATA_KEY] = {
       photoId,
-      fileName: thumbnailResult.thumbnailFileName,
+      fileName: `${photoId}.jpg`,
       buffer: thumbnailResult.thumbnailBuffer,
       localUrl: thumbnailResult.thumbnailUrl,
-      variants: thumbnailResult.thumbnailVariants.map((variant) => ({
-        fileName: variant.fileName,
-        width: variant.width,
-        format: variant.format,
-        contentType: variant.contentType,
-        buffer: variant.buffer,
-        localUrl: variant.localUrl,
-      })),
     }
 
     // 4. 处理 EXIF 数据
@@ -221,12 +219,6 @@ export async function executePhotoProcessingPipeline(
       tags: photoInfo.tags,
       originalUrl: await storageManager.generatePublicUrl(photoKey),
       thumbnailUrl: thumbnailResult.thumbnailUrl,
-      // 先用本地相对地址占位，存储插件上传后会把远端 URL 回填进来
-      thumbnailVariants: thumbnailResult.thumbnailVariants.map((variant) => ({
-        url: variant.localUrl,
-        width: variant.width,
-        format: variant.format,
-      })),
       thumbHash: thumbnailResult.thumbHash ? compressUint8Array(thumbnailResult.thumbHash) : null,
       width: metadata.width,
       height: metadata.height,

@@ -1,5 +1,4 @@
 import { Thumbhash } from '@afilmory/ui'
-import { buildSrcSet, getSrcSetFormats } from '@afilmory/utils'
 import clsx from 'clsx'
 import { m } from 'motion/react'
 import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -17,14 +16,7 @@ import { ImageLoaderManager } from '~/lib/image-loader-manager'
 import { formatExifData } from '~/modules/metadata'
 import type { PhotoManifest } from '~/types/photo'
 
-interface MasonryPhotoItemProps {
-  data: PhotoManifest
-  width: number
-  /** 是否首屏图片：首屏给 fetchPriority=high，让浏览器优先调度 */
-  priority?: boolean
-}
-
-export const MasonryPhotoItem = memo(({ data, width, priority = false }: MasonryPhotoItemProps) => {
+export const MasonryPhotoItem = memo(({ data, width }: { data: PhotoManifest; width: number }) => {
   const photos = useContextPhotos()
   const photoViewer = usePhotoViewer()
   const { t } = useTranslation()
@@ -53,8 +45,8 @@ export const MasonryPhotoItem = memo(({ data, width, priority = false }: Masonry
   const handleClick = () => {
     const photoIndex = photos.findIndex((photo) => photo.id === data.id)
     if (photoIndex !== -1) {
-      // 共享元素动画靠 [data-photo-id] 定位触发器，这里往上找而不是取 parentElement（中间隔了 <picture>）
-      const triggerEl = imageRef.current?.closest<HTMLElement>('[data-photo-id]') ?? imageRef.current
+      const triggerEl =
+        imageRef.current?.parentElement instanceof HTMLElement ? imageRef.current.parentElement : imageRef.current
 
       photoViewer.openViewer(photoIndex, triggerEl ?? undefined)
     }
@@ -62,20 +54,6 @@ export const MasonryPhotoItem = memo(({ data, width, priority = false }: Masonry
 
   // 计算基于宽度的高度
   const calculatedHeight = width / data.aspectRatio
-
-  // 响应式候选集：按格式拆成 <source>，浏览器挑最省带宽的一档
-  const variantSources = useMemo(() => {
-    const formats = getSrcSetFormats(data.thumbnailVariants)
-    return formats
-      .map((format) => ({
-        format,
-        srcSet: buildSrcSet(data.thumbnailVariants, format),
-      }))
-      .filter((source): source is { format: typeof source.format; srcSet: string } => Boolean(source.srcSet))
-  }, [data.thumbnailVariants])
-
-  // 瀑布流列宽就是这一格的显示宽度，告诉浏览器别再多拉一档
-  const imageSizes = `${Math.round(width)}px`
 
   // 使用共享的 EXIF 格式化函数
   const exifData = useMemo(() => formatExifData(data.exif ?? null), [data.exif])
@@ -205,22 +183,15 @@ export const MasonryPhotoItem = memo(({ data, width, priority = false }: Masonry
       {data.thumbHash && <Thumbhash thumbHash={data.thumbHash} className="absolute inset-0" />}
 
       {!imageError && (
-        <picture>
-          {variantSources.map((source) => (
-            <source key={source.format} type={`image/${source.format}`} srcSet={source.srcSet} sizes={imageSizes} />
-          ))}
-          <img
-            ref={imageRef}
-            src={data.thumbnailUrl}
-            alt={data.title}
-            loading={priority ? 'eager' : 'lazy'}
-            fetchPriority={priority ? 'high' : 'auto'}
-            decoding="async"
-            className={'absolute inset-0 h-full w-full object-cover duration-300 group-hover:scale-105'}
-            onLoad={handleImageLoad}
-            onError={handleImageError}
-          />
-        </picture>
+        <img
+          ref={imageRef}
+          src={data.thumbnailUrl}
+          alt={data.title}
+          loading="lazy"
+          className={'absolute inset-0 h-full w-full object-cover duration-300 group-hover:scale-105'}
+          onLoad={handleImageLoad}
+          onError={handleImageError}
+        />
       )}
 
       {/* Live Photo/Motion Photo 视频 */}
