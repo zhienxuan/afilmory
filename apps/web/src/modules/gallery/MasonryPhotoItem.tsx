@@ -212,8 +212,6 @@ export const MasonryPhotoItem = memo(({ data, width, priority = false }: Masonry
           <img
             ref={imageRef}
             src={data.thumbnailUrl}
-            srcSet={buildSrcSet(data.thumbnailVariants, 'jpeg')}
-            sizes={imageSizes}
             alt={data.title}
             loading={priority ? 'eager' : 'lazy'}
             fetchPriority={priority ? 'high' : 'auto'}

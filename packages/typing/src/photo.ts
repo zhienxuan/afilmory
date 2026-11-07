@@ -107,6 +107,8 @@ export interface ProcessPhotoResult {
 
 export interface ThumbnailResult {
   thumbnailUrl: string | null
+  /** 兜底缩略图文件名（内容寻址），存储插件据此上传并回填远端 URL */
+  thumbnailFileName: string | null
   thumbnailBuffer: Buffer | null
   thumbHash: Uint8Array | null
   /** 多档缩略图（不含 URL，URL 由存储插件回填） */

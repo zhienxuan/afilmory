@@ -1,6 +1,6 @@
 import type { PhotoManifestItem } from '@afilmory/typing'
 
-import { thumbnailExists } from '../image/thumbnail.js'
+import { thumbnailCacheValid } from '../image/thumbnail.js'
 import type { PhotoProcessorOptions } from './processor.js'
 
 export interface CacheableData {
@@ -43,17 +43,12 @@ export async function shouldProcessPhoto(
     }
   }
 
-  // 旧版 manifest 缺少响应式候选集，需要补生成
-  if (!existingItem.thumbnailVariants?.length) {
-    return { shouldProcess: true, reason: '缺少响应式缩略图' }
-  }
-
-  // 检查缩略图是否存在
-  const hasThumbnail = await thumbnailExists(photoId)
-  if (!hasThumbnail || options.isForceThumbnails) {
+  // 缩略图缓存是否对得上：文件在 + 内容没变（含旧版本留下的无指纹索引）
+  const cacheValid = await thumbnailCacheValid(photoId, existingItem.digest)
+  if (!cacheValid || options.isForceThumbnails) {
     return {
       shouldProcess: true,
-      reason: options.isForceThumbnails ? '强制重新生成缩略图' : '缩略图缺失',
+      reason: options.isForceThumbnails ? '强制重新生成缩略图' : '缩略图缓存缺失或已过期',
     }
   }
 

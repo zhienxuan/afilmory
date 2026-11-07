@@ -1,9 +1,10 @@
 import fs from 'node:fs/promises'
-import path, { basename } from 'node:path'
+import path from 'node:path'
 
 import { workdir } from '@afilmory/builder/path.js'
 import type { AfilmoryManifest, CameraInfo, LensInfo, PhotoManifestItem } from '@afilmory/typing'
 
+import { candidatePhotoIdsFromThumbnail } from '../image/thumbnail.js'
 import { logger } from '../logger/index.js'
 import type { S3ObjectLike } from '../types/s3.js'
 import { migrateManifestFileIfNeeded } from './migrate.js'
@@ -99,20 +100,16 @@ export async function handleDeletedPhotos(items: PhotoManifestItem[]): Promise<n
   const manifestKeySet = new Set(items.map((item) => item.id))
 
   for (const thumbnail of allThumbnails) {
-    // 缩略图产物有三种命名：`{id}.jpg`、`{id}-{width}w.{avif|webp}`、`{id}.thumbs.json`
-    if (!manifestKeySet.has(extractPhotoIdFromThumbnail(thumbnail))) {
-      await fs.unlink(path.join(workdir, 'public/thumbnails', thumbnail))
-      deletedCount++
+    // 缩略图产物有三种命名：`{id}-{hash}.jpg`、`{id}-{hash}-{width}w.{avif|webp}`、`{id}.thumbs.json`。
+    // 剥指纹是启发式的，所以候选 id 里只要有一个还在 manifest 里，就当它还有主
+    const candidates = candidatePhotoIdsFromThumbnail(thumbnail)
+    if (candidates.some((id) => manifestKeySet.has(id))) {
+      continue
     }
+
+    await fs.unlink(path.join(workdir, 'public/thumbnails', thumbnail))
+    deletedCount++
   }
 
   return deletedCount
-}
-
-/** 从缩略图文件名还原 photoId，用于清理已删除照片的产物 */
-export function extractPhotoIdFromThumbnail(fileName: string): string {
-  const withoutIndexSuffix = fileName.endsWith('.thumbs.json')
-    ? fileName.slice(0, -'.thumbs.json'.length)
-    : basename(fileName, path.extname(fileName))
-  return withoutIndexSuffix.replace(/-\d+w$/, '')
 }

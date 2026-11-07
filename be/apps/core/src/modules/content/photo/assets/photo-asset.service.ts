@@ -2,10 +2,7 @@ import path from 'node:path'
 
 import type { BuilderConfig, PhotoManifestItem, StorageConfig, StorageObject } from '@afilmory/builder'
 import { createStorageKeyNormalizer } from '@afilmory/builder/photo/index.js'
-import {
-  DEFAULT_CONTENT_TYPE,
-  DEFAULT_DIRECTORY as DEFAULT_THUMBNAIL_DIRECTORY,
-} from '@afilmory/builder/plugins/thumbnail-storage/shared.js'
+import { DEFAULT_DIRECTORY as DEFAULT_THUMBNAIL_DIRECTORY } from '@afilmory/builder/plugins/thumbnail-storage/shared.js'
 import { StorageManager } from '@afilmory/builder/storage/index.js'
 import type { GitHubConfig, ManagedStorageConfig, S3CompatibleConfig } from '@afilmory/builder/storage/interfaces.js'
 import type { PhotoAssetManifest } from '@afilmory/db'
@@ -44,10 +41,6 @@ import type { TransactionalUploadProgressEvent } from '../storage/transactional-
 import { TransactionalStorageManager } from '../storage/transactional-storage.manager'
 import type { PhotoAssetListItem, PhotoAssetRecord, PhotoAssetSummary, UploadAssetInput } from './photo-asset.types'
 import { inferContentTypeFromKey } from './storage.utils'
-
-const DEFAULT_THUMBNAIL_EXTENSION = {
-  'image/jpeg': '.jpg',
-}[DEFAULT_CONTENT_TYPE]
 
 const VIDEO_EXTENSIONS = new Set(['mov', 'mp4'])
 
@@ -1615,7 +1608,10 @@ export class PhotoAssetService {
       return []
     }
 
-    const fileNames = new Set<string>([`${photoId}${DEFAULT_THUMBNAIL_EXTENSION}`])
+    // 缩略图文件名带内容指纹，只能从 manifest 里的 URL 反解，别用 photoId 拼
+    const fileNames = new Set<string>()
+    const fallbackFileName = manifestData.thumbnailUrl.split('/').pop()
+    if (fallbackFileName) fileNames.add(fallbackFileName)
     for (const variant of manifestData.thumbnailVariants ?? []) {
       const fileName = variant.url.split('/').pop()
       if (fileName) fileNames.add(fileName)
