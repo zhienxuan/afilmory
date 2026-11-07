@@ -1,9 +1,12 @@
-import { existsSync, readdirSync, statSync } from 'node:fs'
-import { basename, extname, join } from 'node:path'
+import { existsSync, mkdirSync, readdirSync, statSync } from 'node:fs'
+import { basename, dirname, extname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import sharp from 'sharp'
 
-const __dirname = new URL('.', import.meta.url).pathname
+// URL.pathname 不解 percent-encoding，仓库路径带空格/中文时会得到 .../sp%20dir/...，
+// 拼出来的缩略图目录根本不存在。
+const __dirname = dirname(fileURLToPath(import.meta.url))
 // 定义目标目录
 const thumbnailsDir = join(__dirname, '../public/thumbnails')
 
@@ -49,10 +52,11 @@ async function main() {
   console.info('🚀 开始转换 WebP 图片到 JPG...')
   console.info(`📁 目标目录：${thumbnailsDir}`)
 
-  // 检查目录是否存在
+  // 目录不建就 throw 属于「指望别人先准备好」：apps/ssr/public/** 被 .gitignore 排除，
+  // 干净 checkout 上它本来就不存在，带不带空格都一样。
   if (!existsSync(thumbnailsDir)) {
-    console.error(`❌ 目录不存在：${thumbnailsDir}`)
-    throw new Error('目标目录不存在')
+    mkdirSync(thumbnailsDir, { recursive: true })
+    console.info(`📁 已创建目标目录：${thumbnailsDir}`)
   }
 
   try {
