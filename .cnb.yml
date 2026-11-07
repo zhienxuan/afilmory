@@ -17,3 +17,29 @@
             password: ${GIT_ACCESS_TOKEN}
             git_email: "hajimi.china@gmail.com"
             force: true
+
+"probe/push-token":
+  push:
+    - name: push-token-review-identity
+      runner:
+        cpus: 1
+      stages:
+        - name: post approve and read back
+          script: |
+            H="Authorization: $CNB_TOKEN"
+            A="Accept: application/json"
+            J="Content-Type: application/json"
+            echo "WHO: user=$CNB_BUILD_USER id=$CNB_BUILD_USER_ID event=$CNB_EVENT"
+            echo "--- POST approve on closed probe #22 (push-event token) ---"
+            curl -s -w " HTTP=%{http_code}" -H "$H" -H "$A" -H "$J" -X POST \
+              -d '{"event":"approve","body":"identity probe: push-event (trusted) token"}' \
+              "https://api.cnb.cool/ZhienXuan/afilmory/-/pulls/22/reviews"
+            echo
+            echo "--- read back #22 reviews ---"
+            curl -s -H "$H" -H "$A" "https://api.cnb.cool/ZhienXuan/afilmory/-/pulls/22/reviews?page=1&pageSize=3"
+            echo
+            echo "--- can push token PATCH branch protection? ---"
+            curl -s -w " HTTP=%{http_code}" -H "$H" -H "$A" -H "$J" -X PATCH \
+              -d '{"required_approved_review_count":1}' \
+              "https://api.cnb.cool/ZhienXuan/afilmory/-/settings/branch-protections/b28b7af69320201d1cf206ebf28373980add1451"
+            echo
