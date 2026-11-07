@@ -146,6 +146,10 @@ function main() {
 
   // 只把真正写盘的文件塞回暂存区。跳过的（无 frontmatter / 无 lastModified）
   // 本来就该原样留在暂存区外：跟着 add 一遍会把它们尚未暂存的改动卷进这次提交。
+  // 边界：这里对齐的是**文件**粒度，不是行粒度。被刷的文件自身若还有未暂存的
+  // 改动，writeFileSync 已经把工作区那份整个写回去了，再整文件 add 就一并进索引。
+  // 要做到行粒度得拿索引版本重算新内容、git hash-object -w + update-index --cacheinfo，
+  // 为一个自动刷时间戳的脚本不值当。
   const updatedFiles = modifiedFiles.filter((filePath) => updateLastModified(filePath))
 
   if (updatedFiles.length > 0) {
