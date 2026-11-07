@@ -83,8 +83,9 @@ function getModifiedDocsFiles(): string[] {
   try {
     // 用 -z 拿 NUL 分隔的原始路径：core.quotepath 默认 true 时 --name-only 会把
     // 非 ASCII 文件名转成八进制转义串，startsWith / endsWith 双双落空、静默漏刷。
-    // --diff-filter=d 排掉已删除的条目：`git add -- <已删路径>` 是硬 fatal，
-    // 一条就够整批暂存失败，没删的文件一起进不去。
+    // --diff-filter=d 拦的是 `git rm --cached`（索引 D、文件还在盘上）：这种路径
+    // 过得了 existsSync，进了 add 名单就会把刚摘掉的索引项原地复活，删除白做。
+    // 工作区真删掉的条目 existsSync 那层就挡了，走不到 add，不用这里兜。
     const stagedFiles = execFileSync('git', ['diff', '--cached', '--name-only', '-z', '--diff-filter=d'], {
       encoding: 'utf-8',
       cwd: REPO_ROOT,
@@ -99,9 +100,10 @@ function getModifiedDocsFiles(): string[] {
         (file.endsWith('.md') || file.endsWith('.mdx')),
     )
 
-    // 索引里有改动、工作区已删（git status 的 `MD`）：--diff-filter=d 按索引对 HEAD
-    // 判定，这种算 M 排不掉。而 `git add -- <该路径>` 在 MD 态不报错、exit 0，
-    // 却把这条的索引项一起摘掉 —— 用户已暂存的修改会静默消失。必须在此拦掉。
+    // 索引里有改动、工作区已删（`MD`）/ 新增暂存后又删（`AD`）：--diff-filter=d 按
+    // 索引对 HEAD 判定，这两种算 M / A，排不掉。它们进了循环只会 readFileSync 抛
+    // ENOENT，一条刷一屏栈。add 收窄成「真写盘的」之后它们已经进不了索引（早先
+    // 整批 add 会把索引项摘掉，那才是真丢东西），在这层滤掉，省掉这屏噪音。
     return docsFiles.map((file) => join(REPO_ROOT, file)).filter((file) => existsSync(file))
   } catch (error) {
     console.error('Failed to get modified files:', error)
