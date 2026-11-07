@@ -45,6 +45,9 @@ export const PhotoMarkerPin = ({ marker, isSelected = false, onClick, onClose }:
                 src={marker.photo.thumbnailUrl || marker.photo.originalUrl}
                 alt={marker.photo.title || marker.photo.id}
                 thumbHash={marker.photo.thumbHash}
+                variants={marker.photo.thumbnailVariants}
+                /* 40px 的圆形标记底图 */
+                sizes="40px"
                 className="h-full w-full object-cover opacity-40"
                 rootMargin="100px"
                 threshold={0.1}
@@ -102,6 +105,9 @@ export const PhotoMarkerPin = ({ marker, isSelected = false, onClick, onClose }:
                 src={marker.photo.thumbnailUrl || marker.photo.originalUrl}
                 alt={marker.photo.title || marker.photo.id}
                 thumbHash={marker.photo.thumbHash}
+                variants={marker.photo.thumbnailVariants}
+                /* 卡片头图，宽度约 320px */
+                sizes="320px"
                 className="h-full w-full object-cover"
                 rootMargin="200px"
                 threshold={0.1}

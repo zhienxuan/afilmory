@@ -1370,6 +1370,9 @@ importers:
       '@afilmory/hooks':
         specifier: workspace:*
         version: link:../hooks
+      '@afilmory/typing':
+        specifier: workspace:*
+        version: link:../typing
       '@afilmory/utils':
         specifier: workspace:*
         version: link:../utils

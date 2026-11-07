@@ -1,6 +1,7 @@
 'use client'
 
 import type { PhotoManifestItem } from '@afilmory/builder'
+import { PictureSources } from '@afilmory/ui'
 import {
   CarbonIsoOutline,
   MaterialSymbolsShutterSpeed,
@@ -89,12 +90,18 @@ export function PhotoItem({ photo, className }: PhotoItemProps) {
 
       <div className="absolute inset-0">
         <img src={thumbHashDataURL} alt={photo.title} className="absolute inset-0 size-full" loading="lazy" />
-        <img
-          src={photo.thumbnailUrl}
-          alt={photo.title}
-          className="absolute inset-0 size-full object-cover object-center"
-          loading="lazy"
-        />
+        <picture className="contents">
+          <PictureSources
+            variants={photo.thumbnailVariants}
+            sizes="(min-width: 800px) 33vw, (min-width: 600px) 50vw, 100vw"
+          />
+          <img
+            src={photo.thumbnailUrl}
+            alt={photo.title}
+            className="absolute inset-0 size-full object-cover object-center"
+            loading="lazy"
+          />
+        </picture>
       </div>
 
       {/* 图片信息和 EXIF 覆盖层 */}

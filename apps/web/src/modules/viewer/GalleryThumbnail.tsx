@@ -1,4 +1,4 @@
-import { HoverCard, HoverCardContent, HoverCardTrigger, Thumbhash } from '@afilmory/ui'
+import { HoverCard, HoverCardContent, HoverCardTrigger, PictureSources, Thumbhash } from '@afilmory/ui'
 import { clsxm, Spring } from '@afilmory/utils'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { m } from 'motion/react'
@@ -185,11 +185,14 @@ export const GalleryThumbnail: FC<{
                         {photo.thumbHash && (
                           <Thumbhash thumbHash={photo.thumbHash} className="size-fill absolute inset-0" />
                         )}
-                        <img
-                          src={photo.thumbnailUrl}
-                          alt={photo.title}
-                          className="absolute inset-0 h-full w-full object-cover"
-                        />
+                        <picture className="contents">
+                          <PictureSources variants={photo.thumbnailVariants} sizes={`${thumbnailWidth}px`} />
+                          <img
+                            src={photo.thumbnailUrl}
+                            alt={photo.title}
+                            className="absolute inset-0 h-full w-full object-cover"
+                          />
+                        </picture>
                       </button>
                     </HoverCardTrigger>
 
@@ -209,11 +212,15 @@ export const GalleryThumbnail: FC<{
                           {photo.thumbHash && (
                             <Thumbhash thumbHash={photo.thumbHash} className="absolute inset-0 size-full" />
                           )}
-                          <img
-                            src={photo.thumbnailUrl}
-                            alt={photo.title}
-                            className="absolute inset-0 h-full w-full object-cover"
-                          />
+                          <picture className="contents">
+                            {/* 弹层固定 w-80（320px） */}
+                            <PictureSources variants={photo.thumbnailVariants} sizes="320px" />
+                            <img
+                              src={photo.thumbnailUrl}
+                              alt={photo.title}
+                              className="absolute inset-0 h-full w-full object-cover"
+                            />
+                          </picture>
                         </div>
                         {/* Photo info overlay */}
                         {(photo.title || photo.dateTaken) && (
@@ -246,11 +253,14 @@ export const GalleryThumbnail: FC<{
                     {photo.thumbHash && (
                       <Thumbhash thumbHash={photo.thumbHash} className="size-fill absolute inset-0" />
                     )}
-                    <img
-                      src={photo.thumbnailUrl}
-                      alt={photo.title}
-                      className="absolute inset-0 h-full w-full object-cover"
-                    />
+                    <picture className="contents">
+                      <PictureSources variants={photo.thumbnailVariants} sizes={`${thumbnailWidth}px`} />
+                      <img
+                        src={photo.thumbnailUrl}
+                        alt={photo.title}
+                        className="absolute inset-0 h-full w-full object-cover"
+                      />
+                    </picture>
                   </button>
                 )}
               </div>

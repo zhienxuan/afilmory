@@ -1,5 +1,4 @@
-import { Thumbhash } from '@afilmory/ui'
-import { buildSrcSet, getSrcSetFormats } from '@afilmory/utils'
+import { PictureSources, Thumbhash } from '@afilmory/ui'
 import clsx from 'clsx'
 import { m } from 'motion/react'
 import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -62,17 +61,6 @@ export const MasonryPhotoItem = memo(({ data, width, priority = false }: Masonry
 
   // 计算基于宽度的高度
   const calculatedHeight = width / data.aspectRatio
-
-  // 响应式候选集：按格式拆成 <source>，浏览器挑最省带宽的一档
-  const variantSources = useMemo(() => {
-    const formats = getSrcSetFormats(data.thumbnailVariants)
-    return formats
-      .map((format) => ({
-        format,
-        srcSet: buildSrcSet(data.thumbnailVariants, format),
-      }))
-      .filter((source): source is { format: typeof source.format; srcSet: string } => Boolean(source.srcSet))
-  }, [data.thumbnailVariants])
 
   // 瀑布流列宽就是这一格的显示宽度，告诉浏览器别再多拉一档
   const imageSizes = `${Math.round(width)}px`
@@ -206,9 +194,7 @@ export const MasonryPhotoItem = memo(({ data, width, priority = false }: Masonry
 
       {!imageError && (
         <picture>
-          {variantSources.map((source) => (
-            <source key={source.format} type={`image/${source.format}`} srcSet={source.srcSet} sizes={imageSizes} />
-          ))}
+          <PictureSources variants={data.thumbnailVariants} sizes={imageSizes} />
           <img
             ref={imageRef}
             src={data.thumbnailUrl}

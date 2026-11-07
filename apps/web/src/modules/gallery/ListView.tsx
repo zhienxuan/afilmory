@@ -1,4 +1,4 @@
-import { useScrollViewElement } from '@afilmory/ui'
+import { PictureSources, useScrollViewElement } from '@afilmory/ui'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -85,8 +85,8 @@ const PhotoCard = ({ photo }: { photo: PhotoManifest }) => {
   const handleClick = () => {
     const photoIndex = photos.findIndex((p) => p.id === photo.id)
     if (photoIndex !== -1) {
-      const triggerEl =
-        imageRef.current?.parentElement instanceof HTMLElement ? imageRef.current.parentElement : imageRef.current
+      // 共享元素动画靠 [data-photo-id] 定位触发器，这里往上找而不是取 parentElement（中间隔了 <picture>）
+      const triggerEl = imageRef.current?.closest<HTMLElement>('[data-photo-id]') ?? imageRef.current
 
       photoViewer.openViewer(photoIndex, triggerEl ?? undefined)
     }
@@ -136,12 +136,16 @@ const PhotoCard = ({ photo }: { photo: PhotoManifest }) => {
           }
         }
       >
-        <img
-          ref={imageRef}
-          src={photo.thumbnailUrl || photo.originalUrl}
-          alt={photo.title || 'Photo'}
-          className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105 lg:object-cover"
-        />
+        <picture className="contents">
+          {/* 桌面端格子固定 224px（lg:w-56），移动端吃满宽度 */}
+          <PictureSources variants={photo.thumbnailVariants} sizes="(min-width: 1024px) 224px, 100vw" />
+          <img
+            ref={imageRef}
+            src={photo.thumbnailUrl || photo.originalUrl}
+            alt={photo.title || 'Photo'}
+            className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105 lg:object-cover"
+          />
+        </picture>
         {/* Tags 覆盖在图片上 */}
         {photo.tags && photo.tags.length > 0 && (
           <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-wrap gap-1 p-2">

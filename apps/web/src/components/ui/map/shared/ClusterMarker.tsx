@@ -70,6 +70,9 @@ export const ClusterMarker = ({
                           src={photoMarker.photo.thumbnailUrl || photoMarker.photo.originalUrl}
                           alt={photoMarker.photo.title || photoMarker.photo.id}
                           thumbHash={photoMarker.photo.thumbHash}
+                          variants={photoMarker.photo.thumbnailVariants}
+                          /* 马赛克四宫格，每格最大 32px */
+                          sizes="32px"
                           className="h-full w-full object-cover"
                           rootMargin="100px"
                           threshold={0.1}
