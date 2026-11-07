@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import { execFileSync, execSync } from 'node:child_process'
-import { readFileSync, writeFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -81,12 +81,16 @@ function updateLastModified(filePath: string): boolean {
  */
 function getModifiedDocsFiles(): string[] {
   try {
-    // Get staged files
-    const stagedFiles = execSync('git diff --cached --name-only', {
-      encoding: 'utf-8',
-    })
-      .trim()
-      .split('\n')
+    // 用 -z 拿 NUL 分隔的原始路径：core.quotepath 默认 true 时 --name-only 会把
+    // 非 ASCII 文件名转成八进制转义串，startsWith / endsWith 双双落空、静默漏刷。
+    // --diff-filter=d 排掉已删除的条目：`git add -- <已删路径>` 是硬 fatal，
+    // 一条就够整批暂存失败，没删的文件一起进不去。
+    const stagedFiles = execFileSync(
+      'git',
+      ['diff', '--cached', '--name-only', '-z', '--diff-filter=d'],
+      { encoding: 'utf-8', cwd: REPO_ROOT },
+    )
+      .split('\0')
       .filter(Boolean)
 
     // Filter for md/mdx files in docs contents directory
@@ -96,7 +100,12 @@ function getModifiedDocsFiles(): string[] {
         (file.endsWith('.md') || file.endsWith('.mdx')),
     )
 
-    return docsFiles.map((file) => join(REPO_ROOT, file))
+    // 索引里有改动、工作区已删（git status 的 `MD`）：--diff-filter=d 按索引对 HEAD
+    // 判定，这种算 M 排不掉。而 `git add -- <该路径>` 在 MD 态不报错、exit 0，
+    // 却把这条的索引项一起摘掉 —— 用户已暂存的修改会静默消失。必须在此拦掉。
+    return docsFiles
+      .map((file) => join(REPO_ROOT, file))
+      .filter((file) => existsSync(file))
   } catch (error) {
     console.error('Failed to get modified files:', error)
     return []
