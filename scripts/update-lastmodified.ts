@@ -21,8 +21,12 @@ function updateLastModified(filePath: string): boolean {
       return false
     }
 
-    // Parse frontmatter
-    const frontmatterEnd = content.indexOf('---', 3)
+    // Parse frontmatter：收口 `---` 必须独占一行。indexOf('---', 3) 不认行上下文，
+    // 值里出现一次 `---` 就切在那儿 —— lastModified 落到切片之外会静默 Skipping，
+    // 落在切点附近还会把时间戳写成坏值（`+08:0000`）。
+    // 用 indexOf('\n---', 3) 不够：顶格的 `---x` 行照样会被切进前三个字符。
+    const closingIndex = content.slice(3).search(/^---[ \t]*$/m)
+    const frontmatterEnd = closingIndex === -1 ? -1 : closingIndex + 3
     if (frontmatterEnd === -1) {
       console.info(`Skipping ${filePath}: invalid frontmatter format`)
       return false
