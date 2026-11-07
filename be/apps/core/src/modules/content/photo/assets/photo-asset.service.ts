@@ -255,8 +255,9 @@ export class PhotoAssetService {
           }
         }
 
-        const thumbnailKey = this.resolveThumbnailStorageKey(record, thumbnailRemotePrefix)
-        if (thumbnailKey && !deletedThumbnailKeys.has(thumbnailKey)) {
+        // 缩略图是多档候选（JPEG 兜底 + WebP/AVIF），要一起清理，别在 R2 里留孤儿对象
+        for (const thumbnailKey of this.resolveThumbnailStorageKeys(record, thumbnailRemotePrefix)) {
+          if (deletedThumbnailKeys.has(thumbnailKey)) continue
           try {
             await storageManager.deleteFile(thumbnailKey)
             deletedThumbnailKeys.add(thumbnailKey)
@@ -1603,23 +1604,26 @@ export class PhotoAssetService {
     return normalized.length > 0 ? normalized : null
   }
 
-  private resolveThumbnailStorageKey(record: PhotoAssetRecord, remotePrefix: string | null): string | null {
-    const thumbnailUrl = record.manifest?.data?.thumbnailUrl
-    if (!thumbnailUrl) {
-      return null
+  private resolveThumbnailStorageKeys(record: PhotoAssetRecord, remotePrefix: string | null): string[] {
+    const manifestData = record.manifest?.data
+    if (!manifestData?.thumbnailUrl) {
+      return []
     }
 
-    const photoId = record.photoId ?? record.manifest?.data?.id
+    const photoId = record.photoId ?? manifestData.id
     if (!photoId) {
-      return null
+      return []
     }
 
-    const fileName = `${photoId}${DEFAULT_THUMBNAIL_EXTENSION}`
-    if (!remotePrefix) {
-      return fileName
+    const fileNames = new Set<string>([`${photoId}${DEFAULT_THUMBNAIL_EXTENSION}`])
+    for (const variant of manifestData.thumbnailVariants ?? []) {
+      const fileName = variant.url.split('/').pop()
+      if (fileName) fileNames.add(fileName)
     }
 
-    return this.joinStorageSegments(remotePrefix, fileName)
+    return [...fileNames].map((fileName) =>
+      remotePrefix ? this.joinStorageSegments(remotePrefix, fileName) : fileName,
+    )
   }
 
   private resolveThumbnailRemotePrefix(storageConfig: StorageConfig): string | null {

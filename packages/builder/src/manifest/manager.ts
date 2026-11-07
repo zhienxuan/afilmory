@@ -2,7 +2,7 @@ import fs from 'node:fs/promises'
 import path, { basename } from 'node:path'
 
 import { workdir } from '@afilmory/builder/path.js'
-import type { AfilmoryManifest, CameraInfo, LensInfo, PhotoManifestItem  } from '@afilmory/typing'
+import type { AfilmoryManifest, CameraInfo, LensInfo, PhotoManifestItem } from '@afilmory/typing'
 
 import { logger } from '../logger/index.js'
 import type { S3ObjectLike } from '../types/s3.js'
@@ -99,11 +99,20 @@ export async function handleDeletedPhotos(items: PhotoManifestItem[]): Promise<n
   const manifestKeySet = new Set(items.map((item) => item.id))
 
   for (const thumbnail of allThumbnails) {
-    if (!manifestKeySet.has(basename(thumbnail, '.jpg'))) {
+    // 缩略图产物有三种命名：`{id}.jpg`、`{id}-{width}w.{avif|webp}`、`{id}.thumbs.json`
+    if (!manifestKeySet.has(extractPhotoIdFromThumbnail(thumbnail))) {
       await fs.unlink(path.join(workdir, 'public/thumbnails', thumbnail))
       deletedCount++
     }
   }
 
   return deletedCount
+}
+
+/** 从缩略图文件名还原 photoId，用于清理已删除照片的产物 */
+export function extractPhotoIdFromThumbnail(fileName: string): string {
+  const withoutIndexSuffix = fileName.endsWith('.thumbs.json')
+    ? fileName.slice(0, -'.thumbs.json'.length)
+    : basename(fileName, path.extname(fileName))
+  return withoutIndexSuffix.replace(/-\d+w$/, '')
 }

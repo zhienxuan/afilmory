@@ -175,6 +175,14 @@ export async function executePhotoProcessingPipeline(
       fileName: `${photoId}.jpg`,
       buffer: thumbnailResult.thumbnailBuffer,
       localUrl: thumbnailResult.thumbnailUrl,
+      variants: thumbnailResult.thumbnailVariants.map((variant) => ({
+        fileName: variant.fileName,
+        width: variant.width,
+        format: variant.format,
+        contentType: variant.contentType,
+        buffer: variant.buffer,
+        localUrl: variant.localUrl,
+      })),
     }
 
     // 4. 处理 EXIF 数据
@@ -219,6 +227,12 @@ export async function executePhotoProcessingPipeline(
       tags: photoInfo.tags,
       originalUrl: await storageManager.generatePublicUrl(photoKey),
       thumbnailUrl: thumbnailResult.thumbnailUrl,
+      // 先用本地相对地址占位，存储插件上传后会把远端 URL 回填进来
+      thumbnailVariants: thumbnailResult.thumbnailVariants.map((variant) => ({
+        url: variant.localUrl,
+        width: variant.width,
+        format: variant.format,
+      })),
       thumbHash: thumbnailResult.thumbHash ? compressUint8Array(thumbnailResult.thumbHash) : null,
       width: metadata.width,
       height: metadata.height,

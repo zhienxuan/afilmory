@@ -12,7 +12,7 @@ import { workdir } from '../../path.js'
 import { StorageManager } from '../../storage/index.js'
 import type { S3CompatibleConfig, StorageConfig } from '../../storage/interfaces.js'
 import type { ThumbnailPluginData } from '../thumbnail-storage/shared.js'
-import { THUMBNAIL_PLUGIN_DATA_KEY } from '../thumbnail-storage/shared.js'
+import { IMMUTABLE_CACHE_CONTROL, THUMBNAIL_PLUGIN_DATA_KEY } from '../thumbnail-storage/shared.js'
 import type { BuilderPlugin } from '../types.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -190,6 +190,7 @@ function guessContentType(thumbnailUrl: string): string {
   const lowered = thumbnailUrl.toLowerCase()
   if (lowered.endsWith('.png')) return 'image/png'
   if (lowered.endsWith('.webp')) return 'image/webp'
+  if (lowered.endsWith('.avif')) return 'image/avif'
   return 'image/jpeg'
 }
 
@@ -425,6 +426,7 @@ export default function ogImagePlugin(options: OgImagePluginOptions = {}): Build
             try {
               await storageManager.uploadFile(remoteKey, Buffer.from(png), {
                 contentType: resolved.contentType,
+                cacheControl: IMMUTABLE_CACHE_CONTROL,
               })
               stateForUpload.uploaded.add(remoteKey)
             } catch (error) {

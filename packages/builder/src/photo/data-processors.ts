@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import type { PhotoManifestItem, PickedExif, ToneAnalysis } from '@afilmory/typing'
+import type { PhotoManifestItem, PickedExif, ThumbnailVariantFile, ToneAnalysis } from '@afilmory/typing'
 import { decompressUint8Array } from '@afilmory/utils'
 import type sharp from 'sharp'
 
@@ -17,6 +17,7 @@ export interface ThumbnailResult {
   thumbnailUrl: string
   thumbnailBuffer: Buffer
   thumbHash: Uint8Array | null
+  thumbnailVariants: ThumbnailVariantFile[]
 }
 
 /**
@@ -36,6 +37,7 @@ export async function processThumbnailAndBlurhash(
     !options.isForceMode &&
     !options.isForceThumbnails &&
     existingItem?.thumbHash &&
+    existingItem.thumbnailVariants?.length &&
     (await thumbnailExists(photoId))
   ) {
     try {
@@ -50,6 +52,8 @@ export async function processThumbnailAndBlurhash(
         thumbnailUrl,
         thumbnailBuffer,
         thumbHash: decompressUint8Array(existingItem.thumbHash),
+        // 候选图 URL 由存储插件在 afterPhotoProcess 阶段按需回填
+        thumbnailVariants: await readCachedVariantFiles(existingItem.thumbnailVariants),
       }
     } catch (error) {
       loggers.thumbnail.warn(`读取现有缩略图失败，重新生成：${photoId}`, error)
@@ -68,6 +72,51 @@ export async function processThumbnailAndBlurhash(
     thumbnailUrl: result.thumbnailUrl!,
     thumbnailBuffer: result.thumbnailBuffer!,
     thumbHash: result.thumbHash!,
+    thumbnailVariants: result.thumbnailVariants ?? [],
+  }
+}
+
+/**
+ * 复用缓存缩略图时，从本地文件恢复候选图 buffer，
+ * 以便存储插件能把新格式（WebP/AVIF）上传到远端。
+ */
+async function readCachedVariantFiles(
+  variants: PhotoManifestItem['thumbnailVariants'],
+): Promise<ThumbnailVariantFile[]> {
+  if (!variants?.length) return []
+
+  const files: ThumbnailVariantFile[] = []
+  for (const variant of variants) {
+    const fileName = variant.url.split('/').pop()
+    if (!fileName) continue
+    try {
+      const buffer = await fs.readFile(path.join(workdir, 'public/thumbnails', fileName))
+      files.push({
+        fileName,
+        width: variant.width,
+        format: variant.format,
+        contentType: contentTypeOf(variant.format),
+        buffer,
+        localUrl: `/thumbnails/${fileName}`,
+      })
+    } catch {
+      // 本地缺文件时跳过，manifest 里已有远端 URL 可继续用
+    }
+  }
+  return files
+}
+
+function contentTypeOf(format: ThumbnailVariantFile['format']): string {
+  switch (format) {
+    case 'avif': {
+      return 'image/avif'
+    }
+    case 'webp': {
+      return 'image/webp'
+    }
+    default: {
+      return 'image/jpeg'
+    }
   }
 }
 

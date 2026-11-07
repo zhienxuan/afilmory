@@ -25,6 +25,7 @@ import { localesJsonPlugin } from './plugins/vite/locales-json'
 import { manifestInjectPlugin } from './plugins/vite/manifest-inject'
 import { ogImagePlugin } from './plugins/vite/og-image-plugin'
 import { photosStaticPlugin } from './plugins/vite/photos-static'
+import { preconnectPlugin } from './plugins/vite/preconnect'
 import { siteConfigInjectPlugin } from './plugins/vite/site-config-inject'
 
 const devPrint = (): PluginOption => ({
@@ -141,6 +142,7 @@ const staticWebBuildPlugins: PluginOption[] = [
     },
   }),
 
+  preconnectPlugin(),
   ogImagePlugin({
     title: siteConfig.title,
     description: siteConfig.description,

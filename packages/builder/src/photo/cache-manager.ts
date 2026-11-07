@@ -43,6 +43,11 @@ export async function shouldProcessPhoto(
     }
   }
 
+  // 旧版 manifest 缺少响应式候选集，需要补生成
+  if (!existingItem.thumbnailVariants?.length) {
+    return { shouldProcess: true, reason: '缺少响应式缩略图' }
+  }
+
   // 检查缩略图是否存在
   const hasThumbnail = await thumbnailExists(photoId)
   if (!hasThumbnail || options.isForceThumbnails) {

@@ -745,6 +745,12 @@ export class AfilmoryBuilder {
         continue
       }
 
+      // 旧版 manifest 没有响应式候选集，补生成一次
+      if (!existingItem.thumbnailVariants?.length) {
+        tasksToProcess.push(obj)
+        continue
+      }
+
       // 检查缩略图是否存在，如果不存在或强制刷新缩略图则需要处理
       const hasThumbnail = await thumbnailExists(photoId)
       if (!hasThumbnail || options.isForceThumbnails) {
