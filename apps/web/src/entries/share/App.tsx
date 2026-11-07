@@ -41,7 +41,7 @@ export function App() {
   }
 
   if (photos.length === 1) {
-    return <PhotoItem photo={photos[0]} className="absolute inset-0 size-full pt-0!" />
+    return <PhotoItem photo={photos[0]} className="absolute inset-0 size-full pt-0!" sizes="100vw" />
   }
 
   return (

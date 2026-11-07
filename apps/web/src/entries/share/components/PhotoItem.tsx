@@ -16,12 +16,17 @@ const decompressUint8Array = (compressed: string) => {
   return Uint8Array.from(compressed.match(/.{1,2}/g)!.map((byte) => Number.parseInt(byte, 16)))
 }
 
+/** 瀑布流：<600 一列、<800 两列、其余三列 */
+const SHARE_MASONRY_SIZES = '(min-width: 800px) 33vw, (min-width: 600px) 50vw, 100vw'
+
 interface PhotoItemProps {
   photo: PhotoManifestItem
   className?: string
+  /** 该格实际显示宽度，给浏览器挑档用；默认按瀑布流 1/2/3 列 */
+  sizes?: string
 }
 
-export function PhotoItem({ photo, className }: PhotoItemProps) {
+export function PhotoItem({ photo, className, sizes = SHARE_MASONRY_SIZES }: PhotoItemProps) {
   // 生成 thumbhash 预览
   const thumbHashDataURL = photo.thumbHash ? thumbHashToDataURL(decompressUint8Array(photo.thumbHash)) : null
 
@@ -58,10 +63,7 @@ export function PhotoItem({ photo, className }: PhotoItemProps) {
           <img src={thumbHashDataURL} alt={photo.title} className="absolute inset-0 size-full" loading="lazy" />
         )}
         <picture className="contents">
-          <PictureSources
-            variants={photo.thumbnailVariants}
-            sizes="(min-width: 800px) 33vw, (min-width: 600px) 50vw, 100vw"
-          />
+          <PictureSources variants={photo.thumbnailVariants} sizes={sizes} />
           <img
             src={photo.thumbnailUrl}
             alt={photo.title}
