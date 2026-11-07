@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from 'node:fs'
+import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import * as clack from '@clack/prompts'
@@ -9,6 +9,10 @@ import { cancel, isCancel } from '@clack/prompts'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
+
+/** docs 在 77f1649 从 packages/docs 整包搬到 apps/docs */
+const REPO_ROOT = join(__dirname, '..')
+const CONTENTS_DIR = join(REPO_ROOT, 'apps', 'docs', 'contents')
 
 interface DocOptions {
   title: string
@@ -43,17 +47,13 @@ function getCurrentTimestamp(): string {
  * Get available categories by scanning existing directories
  */
 function getCategories(): string[] {
-  const contentsDir = join(__dirname, '..', 'packages', 'docs', 'contents')
   try {
-    const { readdirSync, statSync } = require('node:fs')
-    return readdirSync(contentsDir)
-      .filter((item) => {
-        const fullPath = join(contentsDir, item)
-        return statSync(fullPath).isDirectory()
-      })
+    return readdirSync(CONTENTS_DIR)
+      .filter((item) => statSync(join(CONTENTS_DIR, item)).isDirectory())
       .sort()
-  } catch {
-    return ['deployment', 'guides', 'api', 'tutorial']
+  } catch (error) {
+    clack.log.warn(`无法读取文档目录 ${CONTENTS_DIR}：${error instanceof Error ? error.message : String(error)}`)
+    return []
   }
 }
 
@@ -390,8 +390,7 @@ async function main() {
   spinner.start('Creating document...')
 
   try {
-    const contentsDir = join(__dirname, '..', 'packages', 'docs', 'contents')
-    const targetDir = category ? join(contentsDir, category) : contentsDir
+    const targetDir = category ? join(CONTENTS_DIR, category) : CONTENTS_DIR
     const filePath = join(targetDir, `${filename}.mdx`)
 
     // Create directory if it doesn't exist
@@ -425,9 +424,7 @@ async function main() {
     spinner.stop('Document created successfully!')
 
     clack.note(
-      `Location: packages/docs/contents/${category ? `${category}/` : ''}${filename}.mdx\n` +
-        `Template: ${template}\n` +
-        `Title: ${title}`,
+      `Location: ${relative(REPO_ROOT, filePath)}\n` + `Template: ${template}\n` + `Title: ${title}`,
       'Document Details',
     )
 
