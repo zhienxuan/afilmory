@@ -104,7 +104,9 @@ const staticWebBuildPlugins: PluginOption[] = [
       // 社交爬虫看，App 内从不显示。cleanup 特意保留最近 3 张，于是 public/ 里常态驻留
       // 若干张残留，被 copy 进 dist 后会被 precache 全量收进去 —— entries 数会随本机
       // 构建历史浮动（33/34/35 都见过），白占用户缓存。这里直接排除，让 entries 稳定。
-      globIgnores: ['**/*.{jpg,jpeg}', '**/og-image-*.png'], // 忽略大图片与 OG 卡片
+      // test-*-rendering.png 是 scripts/test-svg-text.ts 的调试产物。那个脚本现在已改写到
+      // 仓库根的 .tmp/ 下，这条是兜底：本地留着老版本脚本产出的残留时依然不会进 precache。
+      globIgnores: ['**/*.{jpg,jpeg}', '**/og-image-*.png', '**/test-*-rendering.png'],
       runtimeCaching: [
         {
           urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
