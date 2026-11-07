@@ -1,12 +1,17 @@
 #!/usr/bin/env node
 
-import { execSync } from 'node:child_process'
+import { execFileSync, execSync } from 'node:child_process'
 import { readFileSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
+
+/** docs 在 77f1649 从 packages/docs 整包搬到 apps/docs */
+const REPO_ROOT = join(__dirname, '..')
+const CONTENTS_DIR = join(REPO_ROOT, 'apps', 'docs', 'contents')
+const CONTENTS_DIR_REL = relative(REPO_ROOT, CONTENTS_DIR).replaceAll('\\', '/')
 
 /**
  * Update lastModified field in MDX files
@@ -56,7 +61,7 @@ function updateLastModified(filePath: string): boolean {
 
     // Update lastModified field
     const updatedFrontmatter = frontmatter.replace(
-      /lastModified:\s[^\n]+$/m,
+      /lastModified:[ \t]*[^\n]*$/m,
       `lastModified: ${currentDate}`,
     )
 
@@ -87,11 +92,11 @@ function getModifiedDocsFiles(): string[] {
     // Filter for md/mdx files in docs contents directory
     const docsFiles = stagedFiles.filter(
       (file) =>
-        file.startsWith('packages/docs/contents/') &&
+        file.startsWith(`${CONTENTS_DIR_REL}/`) &&
         (file.endsWith('.md') || file.endsWith('.mdx')),
     )
 
-    return docsFiles.map((file) => join(__dirname, '..', file))
+    return docsFiles.map((file) => join(REPO_ROOT, file))
   } catch (error) {
     console.error('Failed to get modified files:', error)
     return []
@@ -115,7 +120,7 @@ function main() {
 
     if (hasUpdates) {
       console.info('\n📝 Please check updates and re-add to staging area:')
-      console.info('git add packages/docs/contents/')
+      console.info(`git add ${CONTENTS_DIR_REL}/`)
     }
     return
   }
@@ -143,11 +148,15 @@ function main() {
       '\n📝 Auto-updated lastModified fields, re-adding to staging area...',
     )
     try {
-      execSync('git add packages/docs/contents/', { stdio: 'inherit' })
+      // 传数组走 execFile，不过 shell：仓库路径带空格也不会拼错
+      execFileSync('git', ['add', '--', ...modifiedFiles], {
+        stdio: 'inherit',
+        cwd: REPO_ROOT,
+      })
       console.info('✅ Successfully re-added to staging area')
     } catch (error) {
       console.error('❌ Failed to re-add to staging area:', error)
-      console.info('Please run manually: git add packages/docs/contents/')
+      console.info(`Please run manually: git add ${CONTENTS_DIR_REL}/`)
     }
   }
 }
