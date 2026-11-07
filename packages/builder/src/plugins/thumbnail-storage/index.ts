@@ -3,8 +3,10 @@ import type { S3CompatibleConfig, StorageConfig } from '../../storage/interfaces
 import type { BuilderPlugin } from '../types.js'
 import type { ThumbnailPluginData } from './shared.js'
 import {
+  contentTypeFromFileName,
   DEFAULT_CONTENT_TYPE,
   DEFAULT_DIRECTORY,
+  IMMUTABLE_CACHE_CONTROL,
   THUMBNAIL_PLUGIN_DATA_KEY,
   THUMBNAIL_PLUGIN_SYMBOL,
 } from './shared.js'
@@ -32,6 +34,12 @@ interface ResolvedPluginConfig {
 interface PluginRunState {
   uploaded: Set<string>
   urlCache: Map<string, string>
+}
+
+interface UploadTarget {
+  fileName: string
+  buffer: Buffer
+  contentType: string
 }
 
 function normalizeDirectory(directory: string | undefined): string {
@@ -154,13 +162,43 @@ export default function thumbnailStoragePlugin(options: ThumbnailStoragePluginOp
           return
         }
 
-        const remoteKey = joinSegments(resolved.remotePrefix, data.fileName)
         const state = getOrCreateRunState(runShared)
+        const { remotePrefix, contentType: fallbackContentType } = resolved
 
-        if (!state.uploaded.has(remoteKey)) {
+        const targets: UploadTarget[] = [
+          { fileName: data.fileName, buffer: data.buffer, contentType: fallbackContentType },
+          ...(data.variants ?? [])
+            .filter((variant): variant is typeof variant & { buffer: Buffer } => Boolean(variant.buffer))
+            .map((variant) => ({
+              fileName: variant.fileName,
+              buffer: variant.buffer,
+              contentType: variant.contentType || contentTypeFromFileName(variant.fileName),
+            })),
+        ]
+
+        const resolveRemoteUrl = async (fileName: string): Promise<string | null> => {
+          const remoteKey = joinSegments(remotePrefix, fileName)
+          const cached = state.urlCache.get(remoteKey)
+          if (cached) return cached
+
           try {
-            await storageManager.uploadFile(remoteKey, data.buffer, {
-              contentType: resolved.contentType,
+            const url = await storageManager.generatePublicUrl(remoteKey)
+            state.urlCache.set(remoteKey, url)
+            return url
+          } catch (error) {
+            logger.thumbnail.error(`生成缩略图 URL 失败：${remoteKey}`, error)
+            return null
+          }
+        }
+
+        for (const target of targets) {
+          const remoteKey = joinSegments(remotePrefix, target.fileName)
+          if (state.uploaded.has(remoteKey)) continue
+
+          try {
+            await storageManager.uploadFile(remoteKey, target.buffer, {
+              contentType: target.contentType,
+              cacheControl: IMMUTABLE_CACHE_CONTROL,
             })
             state.uploaded.add(remoteKey)
           } catch (error) {
@@ -169,18 +207,27 @@ export default function thumbnailStoragePlugin(options: ThumbnailStoragePluginOp
           }
         }
 
-        let remoteUrl = state.urlCache.get(remoteKey)
+        const remoteUrl = await resolveRemoteUrl(data.fileName)
         if (!remoteUrl) {
-          try {
-            remoteUrl = await storageManager.generatePublicUrl(remoteKey)
-            state.urlCache.set(remoteKey, remoteUrl)
-          } catch (error) {
-            logger.thumbnail.error(`生成缩略图 URL 失败：${remoteKey}`, error)
-            return
-          }
+          return
         }
-
         payload.result.item.thumbnailUrl = remoteUrl
+
+        // 回填响应式候选图的远端 URL
+        const item = payload.result.item
+        if (item.thumbnailVariants?.length) {
+          const resolvedVariants = await Promise.all(
+            item.thumbnailVariants.map(async (variant) => {
+              const fileName = variant.url.split('/').pop()
+              if (!fileName) return null
+              const url = await resolveRemoteUrl(fileName)
+              return url ? { ...variant, url } : null
+            }),
+          )
+          item.thumbnailVariants = resolvedVariants.filter((variant): variant is NonNullable<typeof variant> =>
+            Boolean(variant),
+          )
+        }
       },
     },
   }
