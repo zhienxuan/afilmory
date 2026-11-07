@@ -55,11 +55,33 @@ export interface ImageMetadata {
   format: string
 }
 
+/**
+ * 响应式缩略图候选之一。
+ * 同一个 width 通常存在 avif / webp 两种格式，由前端按浏览器能力挑选。
+ */
+export interface ThumbnailVariant {
+  /** 可公开访问的缩略图地址 */
+  url: string
+  /** 缩略图宽度（像素），用于生成 srcset 的宽度描述符 */
+  width: number
+  /** 编码格式 */
+  format: ThumbnailFormat
+}
+
+export type ThumbnailFormat = 'avif' | 'webp' | 'jpeg'
+
 export interface PhotoManifestItem extends PhotoInfo {
   id: string
   originalUrl: string
   format: string
+  /**
+   * 默认缩略图（JPEG 兜底，用于 OG 卡片、旧消费方与不支持 srcset 的场景）
+   */
   thumbnailUrl: string
+  /**
+   * 响应式缩略图候选集：多档宽度 × WebP/AVIF，前端据此生成 srcset
+   */
+  thumbnailVariants?: ThumbnailVariant[]
   ogImageUrl?: string | null
   thumbHash: string | null
   width: number
@@ -85,8 +107,22 @@ export interface ProcessPhotoResult {
 
 export interface ThumbnailResult {
   thumbnailUrl: string | null
+  /** 兜底缩略图文件名（内容寻址），存储插件据此上传并回填远端 URL */
+  thumbnailFileName: string | null
   thumbnailBuffer: Buffer | null
   thumbHash: Uint8Array | null
+  /** 多档缩略图（不含 URL，URL 由存储插件回填） */
+  thumbnailVariants?: ThumbnailVariantFile[]
+}
+
+/** builder 产物层的缩略图文件（本地路径 + 内存 buffer） */
+export interface ThumbnailVariantFile {
+  fileName: string
+  width: number
+  format: ThumbnailFormat
+  contentType: string
+  buffer: Buffer
+  localUrl: string
 }
 
 export interface PickedExif {

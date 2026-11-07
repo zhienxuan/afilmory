@@ -25,6 +25,7 @@ import { localesJsonPlugin } from './plugins/vite/locales-json'
 import { manifestInjectPlugin } from './plugins/vite/manifest-inject'
 import { ogImagePlugin } from './plugins/vite/og-image-plugin'
 import { photosStaticPlugin } from './plugins/vite/photos-static'
+import { preconnectPlugin } from './plugins/vite/preconnect'
 import { siteConfigInjectPlugin } from './plugins/vite/site-config-inject'
 
 const devPrint = (): PluginOption => ({
@@ -213,6 +214,10 @@ export default defineConfig(() => {
       localesJsonPlugin(),
       tailwindcss(),
       ...(BUILD_FOR_SERVER_SERVE ? [] : staticWebBuildPlugins),
+      // preconnect 两条腿都要落地：静态站点构建靠 transformIndexHtml 插 <link>，
+      // 而 server-serve 构建（build:serve / core build:web）由后端运行时注入整份 manifest，
+      // 那时只能靠插件里的内联脚本按真实 manifest 补 link。所以它不能待在静态插件数组里。
+      preconnectPlugin(),
       process.env.analyzer && analyzer(),
 
       devPrint(),

@@ -12,7 +12,8 @@ import { workdir } from '../../path.js'
 import { StorageManager } from '../../storage/index.js'
 import type { S3CompatibleConfig, StorageConfig } from '../../storage/interfaces.js'
 import type { ThumbnailPluginData } from '../thumbnail-storage/shared.js'
-import { THUMBNAIL_PLUGIN_DATA_KEY } from '../thumbnail-storage/shared.js'
+import { contentHashOf } from '../../utils/content-hash.js'
+import { IMMUTABLE_CACHE_CONTROL, THUMBNAIL_PLUGIN_DATA_KEY } from '../thumbnail-storage/shared.js'
 import type { BuilderPlugin } from '../types.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -190,6 +191,7 @@ function guessContentType(thumbnailUrl: string): string {
   const lowered = thumbnailUrl.toLowerCase()
   if (lowered.endsWith('.png')) return 'image/png'
   if (lowered.endsWith('.webp')) return 'image/webp'
+  if (lowered.endsWith('.avif')) return 'image/avif'
   return 'image/jpeg'
 }
 
@@ -283,6 +285,24 @@ function getPhotoDimensions(photo: PhotoManifestItem) {
     width: photo.width || 1,
     height: photo.height || 1,
   }
+}
+
+/**
+ * OG 图的文件名：`{id}-{hash8}.png`。
+ * 指纹取自决定画面的输入（原图内容摘要 + 标题/标签/站点名/尺寸），
+ * 这些值都在 manifest item 上，跳过处理的照片也能算出同一个名字。
+ */
+function ogFileName(item: PhotoManifestItem, siteMeta: SiteMeta | undefined): string {
+  const fingerprint = JSON.stringify([
+    item.digest ?? `${item.s3Key}:${item.size}:${item.lastModified}`,
+    item.title ?? '',
+    item.tags ?? [],
+    item.width ?? 0,
+    item.height ?? 0,
+    siteMeta?.siteName ?? '',
+    siteMeta?.accentColor ?? '',
+  ])
+  return `${item.id}-${contentHashOf(Buffer.from(fingerprint))}.png`
 }
 
 /**
@@ -383,9 +403,16 @@ export default function ogImagePlugin(options: OgImagePluginOptions = {}): Build
 
         const shouldRender = type !== 'skipped' || payload.options.isForceMode || payload.options.isForceManifest
 
-        const remoteKey = joinSegments(resolved.remotePrefix, `${item.id}.png`)
+        // OG 图也走内容寻址：文件名掺入决定画面的那些输入，内容变了 URL 就变，
+        // 上传时那条 immutable 才不会把旧卡片钉死。
+        const remoteKey = joinSegments(resolved.remotePrefix, ogFileName(item, state.siteMeta))
 
         if (!shouldRender) {
+          // 跳过处理的照片没有重新渲染，远端未必有这个新名字的对象。
+          // manifest 里已有的 URL 才是实际存在的那个，原样留着，别指向不存在的地址
+          if (item.ogImageUrl) {
+            return
+          }
           try {
             const remoteUrl = await storageManager.generatePublicUrl(remoteKey)
             state.urlCache.set(remoteKey, remoteUrl)
@@ -425,6 +452,7 @@ export default function ogImagePlugin(options: OgImagePluginOptions = {}): Build
             try {
               await storageManager.uploadFile(remoteKey, Buffer.from(png), {
                 contentType: resolved.contentType,
+                cacheControl: IMMUTABLE_CACHE_CONTROL,
               })
               stateForUpload.uploaded.add(remoteKey)
             } catch (error) {
