@@ -145,20 +145,17 @@ function main() {
   console.info(`🔍 Found ${modifiedFiles.length} modified documentation files:`)
   modifiedFiles.forEach((file) => console.info(`  - ${file}`))
 
-  let hasUpdates = false
-  for (const filePath of modifiedFiles) {
-    if (updateLastModified(filePath)) {
-      hasUpdates = true
-    }
-  }
+  // 只把真正写盘的文件塞回暂存区。跳过的（无 frontmatter / 无 lastModified）
+  // 本来就该原样留在暂存区外：跟着 add 一遍会把它们尚未暂存的改动卷进这次提交。
+  const updatedFiles = modifiedFiles.filter((filePath) => updateLastModified(filePath))
 
-  if (hasUpdates) {
+  if (updatedFiles.length > 0) {
     console.info(
       '\n📝 Auto-updated lastModified fields, re-adding to staging area...',
     )
     try {
       // 传数组走 execFile，不过 shell：仓库路径带空格也不会拼错
-      execFileSync('git', ['add', '--', ...modifiedFiles], {
+      execFileSync('git', ['add', '--', ...updatedFiles], {
         stdio: 'inherit',
         cwd: REPO_ROOT,
       })
