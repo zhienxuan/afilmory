@@ -1,22 +1,23 @@
-import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import type { PhotoManifestItem, PickedExif, ToneAnalysis } from '@afilmory/typing'
+import type { PhotoManifestItem, PickedExif, ThumbnailVariantFile, ToneAnalysis } from '@afilmory/typing'
 import { decompressUint8Array } from '@afilmory/utils'
 import type sharp from 'sharp'
 
 import { HEIC_FORMATS } from '../constants/index.js'
 import { extractExifData } from '../image/exif.js'
 import { calculateHistogramAndAnalyzeTone } from '../image/histogram.js'
-import { generateThumbnailAndBlurhash, thumbnailExists } from '../image/thumbnail.js'
-import { workdir } from '../path.js'
+import { generateThumbnailAndBlurhash, readCachedThumbnailFiles } from '../image/thumbnail.js'
+import { contentHashOf } from '../utils/content-hash.js'
 import { getGlobalLoggers } from './logger-adapter.js'
 import type { PhotoProcessorOptions } from './processor.js'
 
 export interface ThumbnailResult {
   thumbnailUrl: string
+  thumbnailFileName: string
   thumbnailBuffer: Buffer
   thumbHash: Uint8Array | null
+  thumbnailVariants: ThumbnailVariantFile[]
 }
 
 /**
@@ -31,30 +32,24 @@ export async function processThumbnailAndBlurhash(
 ): Promise<ThumbnailResult> {
   const loggers = getGlobalLoggers()
 
-  // 检查是否可以复用现有数据
-  if (
-    !options.isForceMode &&
-    !options.isForceThumbnails &&
-    existingItem?.thumbHash &&
-    (await thumbnailExists(photoId))
-  ) {
-    try {
-      const thumbnailPath = path.join(workdir, 'public/thumbnails', `${photoId}.jpg`)
-      const thumbnailBuffer = await fs.readFile(thumbnailPath)
-      const thumbnailUrl = `/thumbnails/${photoId}.jpg`
-
+  // 检查是否可以复用现有数据。文件按内容寻址：先确认内容没变，再按索引把文件读回来
+  if (!options.isForceMode && !options.isForceThumbnails && existingItem?.thumbHash) {
+    const cached = await readCachedThumbnailFiles(photoId, contentHashOf(imageBuffer))
+    if (cached) {
       loggers.blurhash.info(`复用现有 blurhash: ${photoId}`)
       loggers.thumbnail.info(`复用现有缩略图：${photoId}`)
 
       return {
-        thumbnailUrl,
-        thumbnailBuffer,
+        thumbnailUrl: `/thumbnails/${cached.thumbnailFileName}`,
+        thumbnailFileName: cached.thumbnailFileName,
+        thumbnailBuffer: cached.thumbnailBuffer,
         thumbHash: decompressUint8Array(existingItem.thumbHash),
+        // 候选图 URL 由存储插件在 afterPhotoProcess 阶段按需回填
+        thumbnailVariants: cached.variants,
       }
-    } catch (error) {
-      loggers.thumbnail.warn(`读取现有缩略图失败，重新生成：${photoId}`, error)
-      // 继续执行生成逻辑
     }
+
+    loggers.thumbnail.info(`缩略图缓存不匹配（内容已变或文件缺失），重新生成：${photoId}`)
   }
 
   // 生成新的缩略图和 blurhash
@@ -66,8 +61,10 @@ export async function processThumbnailAndBlurhash(
 
   return {
     thumbnailUrl: result.thumbnailUrl!,
+    thumbnailFileName: result.thumbnailFileName!,
     thumbnailBuffer: result.thumbnailBuffer!,
     thumbHash: result.thumbHash!,
+    thumbnailVariants: result.thumbnailVariants ?? [],
   }
 }
 

@@ -51,6 +51,9 @@ export const ClusterPhotoGrid = ({ photos, onPhotoClick }: ClusterPhotoGridProps
                 src={photoMarker.photo.thumbnailUrl || photoMarker.photo.originalUrl}
                 alt={photoMarker.photo.title || photoMarker.photo.id}
                 thumbHash={photoMarker.photo.thumbHash}
+                variants={photoMarker.photo.thumbnailVariants}
+                /* 三列网格，每格约 1/3 弹层宽度 */
+                sizes="(min-width: 768px) 100px, 30vw"
                 className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
                 rootMargin="200px"
                 threshold={0.1}

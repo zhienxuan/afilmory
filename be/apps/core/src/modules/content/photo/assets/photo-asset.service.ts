@@ -2,10 +2,7 @@ import path from 'node:path'
 
 import type { BuilderConfig, PhotoManifestItem, StorageConfig, StorageObject } from '@afilmory/builder'
 import { createStorageKeyNormalizer } from '@afilmory/builder/photo/index.js'
-import {
-  DEFAULT_CONTENT_TYPE,
-  DEFAULT_DIRECTORY as DEFAULT_THUMBNAIL_DIRECTORY,
-} from '@afilmory/builder/plugins/thumbnail-storage/shared.js'
+import { DEFAULT_DIRECTORY as DEFAULT_THUMBNAIL_DIRECTORY } from '@afilmory/builder/plugins/thumbnail-storage/shared.js'
 import { StorageManager } from '@afilmory/builder/storage/index.js'
 import type { GitHubConfig, ManagedStorageConfig, S3CompatibleConfig } from '@afilmory/builder/storage/interfaces.js'
 import type { PhotoAssetManifest } from '@afilmory/db'
@@ -44,10 +41,6 @@ import type { TransactionalUploadProgressEvent } from '../storage/transactional-
 import { TransactionalStorageManager } from '../storage/transactional-storage.manager'
 import type { PhotoAssetListItem, PhotoAssetRecord, PhotoAssetSummary, UploadAssetInput } from './photo-asset.types'
 import { inferContentTypeFromKey } from './storage.utils'
-
-const DEFAULT_THUMBNAIL_EXTENSION = {
-  'image/jpeg': '.jpg',
-}[DEFAULT_CONTENT_TYPE]
 
 const VIDEO_EXTENSIONS = new Set(['mov', 'mp4'])
 
@@ -255,8 +248,9 @@ export class PhotoAssetService {
           }
         }
 
-        const thumbnailKey = this.resolveThumbnailStorageKey(record, thumbnailRemotePrefix)
-        if (thumbnailKey && !deletedThumbnailKeys.has(thumbnailKey)) {
+        // 缩略图是多档候选（JPEG 兜底 + WebP/AVIF），要一起清理，别在 R2 里留孤儿对象
+        for (const thumbnailKey of this.resolveThumbnailStorageKeys(record, thumbnailRemotePrefix)) {
+          if (deletedThumbnailKeys.has(thumbnailKey)) continue
           try {
             await storageManager.deleteFile(thumbnailKey)
             deletedThumbnailKeys.add(thumbnailKey)
@@ -1603,23 +1597,29 @@ export class PhotoAssetService {
     return normalized.length > 0 ? normalized : null
   }
 
-  private resolveThumbnailStorageKey(record: PhotoAssetRecord, remotePrefix: string | null): string | null {
-    const thumbnailUrl = record.manifest?.data?.thumbnailUrl
-    if (!thumbnailUrl) {
-      return null
+  private resolveThumbnailStorageKeys(record: PhotoAssetRecord, remotePrefix: string | null): string[] {
+    const manifestData = record.manifest?.data
+    if (!manifestData?.thumbnailUrl) {
+      return []
     }
 
-    const photoId = record.photoId ?? record.manifest?.data?.id
+    const photoId = record.photoId ?? manifestData.id
     if (!photoId) {
-      return null
+      return []
     }
 
-    const fileName = `${photoId}${DEFAULT_THUMBNAIL_EXTENSION}`
-    if (!remotePrefix) {
-      return fileName
+    // 缩略图文件名带内容指纹，只能从 manifest 里的 URL 反解，别用 photoId 拼
+    const fileNames = new Set<string>()
+    const fallbackFileName = manifestData.thumbnailUrl.split('/').pop()
+    if (fallbackFileName) fileNames.add(fallbackFileName)
+    for (const variant of manifestData.thumbnailVariants ?? []) {
+      const fileName = variant.url.split('/').pop()
+      if (fileName) fileNames.add(fileName)
     }
 
-    return this.joinStorageSegments(remotePrefix, fileName)
+    return [...fileNames].map((fileName) =>
+      remotePrefix ? this.joinStorageSegments(remotePrefix, fileName) : fileName,
+    )
   }
 
   private resolveThumbnailRemotePrefix(storageConfig: StorageConfig): string | null {

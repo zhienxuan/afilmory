@@ -9,6 +9,9 @@ import type { MasonryRef } from './Masonic'
 import { Masonry } from './Masonic'
 import { MasonryPhotoItem } from './MasonryPhotoItem'
 
+/** 首屏大概能放下这么多格，这些格子用 eager + high 优先级抢带宽 */
+const FIRST_SCREEN_ITEM_COUNT = 6
+
 const COLUMN_WIDTH_CONFIG = {
   auto: {
     mobile: 150,
@@ -87,7 +90,7 @@ export const MasonryView = ({ photos, onRender }: MasonryViewProps) => {
       items={photos}
       render={useCallback(
         (props) => (
-          <MasonryItem {...props} />
+          <MasonryItem {...props} priority={props.index < FIRST_SCREEN_ITEM_COUNT} />
         ),
         [],
       )}

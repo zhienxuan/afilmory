@@ -1,13 +1,16 @@
-import { writeFileSync } from 'node:fs'
+import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import sharp from 'sharp'
 
-import {
-  measureSVGText,
-  renderSVGText,
-  wrapSVGText,
-} from './svg-text-renderer.js'
+import { measureSVGText, renderSVGText, wrapSVGText } from './svg-text-renderer.js'
+
+// 调试图写到仓库根的 .tmp/，不要写 public/ —— public/ 是 Vite 的静态目录，
+// 里面的一切都会被当作站点资源拷进 dist/ 发布上线，还会被 PWA precache 收进去。
+// 用 fileURLToPath 而不是 process.cwd()：后者取决于在哪个目录敲命令，从仓库根跑
+// 会指向不存在的 public/ 直接 ENOENT。
+const OUTPUT_DIR = fileURLToPath(new URL('../.tmp/test-svg-text/', import.meta.url))
 
 async function generateTestImages() {
   const width = 1200
@@ -116,21 +119,17 @@ async function generateTestImages() {
   `
 
   try {
+    mkdirSync(OUTPUT_DIR, { recursive: true })
+
     // 生成 SVG 路径版本
     const svgBuffer = await sharp(Buffer.from(svgTestImage)).png().toBuffer()
-    const svgPath = join(process.cwd(), 'public', 'test-svg-font-rendering.png')
+    const svgPath = join(OUTPUT_DIR, 'test-svg-font-rendering.png')
     writeFileSync(svgPath, svgBuffer)
     console.info(`✅ SVG font test image generated: ${svgPath}`)
 
     // 生成传统字体版本
-    const traditionalBuffer = await sharp(Buffer.from(traditionalTestImage))
-      .png()
-      .toBuffer()
-    const traditionalPath = join(
-      process.cwd(),
-      'public',
-      'test-traditional-font-rendering.png',
-    )
+    const traditionalBuffer = await sharp(Buffer.from(traditionalTestImage)).png().toBuffer()
+    const traditionalPath = join(OUTPUT_DIR, 'test-traditional-font-rendering.png')
     writeFileSync(traditionalPath, traditionalBuffer)
     console.info(`✅ Traditional font test image generated: ${traditionalPath}`)
 
@@ -160,7 +159,10 @@ async function generateTestImages() {
 }
 
 // 如果直接运行此脚本
-if (import.meta.url === `file://${process.argv[1]}`) {
+// 比对必须解 percent-encoding：import.meta.url 是 `file:///tmp/%E4%B8%AD...`，
+// 而 process.argv[1] 是裸路径。直接拼 `file://${argv[1]}` 时，路径里只要有空格
+// 或中文就永远不相等，guard 静默不触发 —— exit 0、零输出、什么都不产出。
+if (process.argv[1] !== undefined && fileURLToPath(import.meta.url) === process.argv[1]) {
   generateTestImages().catch(console.error)
 }
 
