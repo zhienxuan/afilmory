@@ -1,9 +1,12 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import path, { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import sharp from 'sharp'
 
-const __dirname = path.dirname(new URL(import.meta.url).pathname)
+// 必须用 fileURLToPath 而不是 URL.pathname：后者不解 percent-encoding，
+// 路径里有空格或中文时会得到 .../sp%20dir/scripts，join 出来的 logo 路径根本不存在。
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // 创建圆角遮罩
 function createRoundedCornersMask(size: number, cornerRadius: number) {
@@ -116,6 +119,8 @@ export async function generateFavicons() {
 }
 
 // 如果直接运行此脚本
-if (import.meta.url === `file://${process.argv[1]}`) {
+// import.meta.url 是 percent-encoded URL，process.argv[1] 是裸路径；
+// 路径含空格/中文时两边永远不等，guard 静默不触发。
+if (process.argv[1] !== undefined && fileURLToPath(import.meta.url) === process.argv[1]) {
   generateFavicons().catch(console.error)
 }

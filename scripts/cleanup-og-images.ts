@@ -1,5 +1,6 @@
 import { readdir, stat, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 interface FileInfo {
   name: string
@@ -52,6 +53,8 @@ export async function cleanupOldOGImages(keepCount = 3) {
 }
 
 // 如果直接运行此脚本
-if (import.meta.url === `file://${process.argv[1]}`) {
+// import.meta.url 是 percent-encoded URL，process.argv[1] 是裸路径；
+// 路径含空格/中文时两边永远不等，guard 静默不触发。
+if (process.argv[1] !== undefined && fileURLToPath(import.meta.url) === process.argv[1]) {
   cleanupOldOGImages().catch(console.error)
 }

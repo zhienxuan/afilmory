@@ -397,7 +397,9 @@ async function main() {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// import.meta.url 是 percent-encoded URL，process.argv[1] 是裸路径；
+// 路径含空格/中文时两边永远不等，guard 静默不触发。
+if (process.argv[1] !== undefined && fileURLToPath(import.meta.url) === process.argv[1]) {
   main().catch(console.error)
 }
 
