@@ -159,7 +159,10 @@ async function generateTestImages() {
 }
 
 // 如果直接运行此脚本
-if (import.meta.url === `file://${process.argv[1]}`) {
+// 比对必须解 percent-encoding：import.meta.url 是 `file:///tmp/%E4%B8%AD...`，
+// 而 process.argv[1] 是裸路径。直接拼 `file://${argv[1]}` 时，路径里只要有空格
+// 或中文就永远不相等，guard 静默不触发 —— exit 0、零输出、什么都不产出。
+if (process.argv[1] !== undefined && fileURLToPath(import.meta.url) === process.argv[1]) {
   generateTestImages().catch(console.error)
 }
 
